@@ -93,7 +93,7 @@ def iter_hosts_dict(page=None):
         yield hst.dict()
 
 def init():
-    settings.local.host = Host()
+    settings.local.host = Host(name=os.environ.get('PRITUNL_HOSTNAME', None))
 
     try:
         settings.local.host.load()
