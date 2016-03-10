@@ -80,7 +80,7 @@ class Clients(object):
         if user.link_server_id:
             link_usr_svr = self.server.get_link_server(user.link_server_id,
                 fields=('_id', 'network', 'network_start', 'network_end',
-                    'local_networks', 'organizations', 'routes'))
+                    'local_networks', 'organizations', 'routes', 'links'))
 
             for route in link_usr_svr.get_routes(
                     include_default=False):
@@ -138,7 +138,7 @@ class Clients(object):
 
             for link_svr in self.server.iter_links(fields=(
                     '_id', 'network', 'local_networks', 'network_start',
-                    'network_end', 'organizations', 'routes')):
+                    'network_end', 'organizations', 'routes', 'links')):
                 for route in link_svr.get_routes(
                         include_default=False):
                     network = route['network']
@@ -979,7 +979,10 @@ class Clients(object):
                 'del',
                 virt_address,
             ])
-            self.client_routes.pop(virt_address, None)
+            try:
+                self.client_routes.remove(virt_address)
+            except KeyError:
+                pass
         except subprocess.CalledProcessError:
             pass
         finally:

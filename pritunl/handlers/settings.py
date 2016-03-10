@@ -18,12 +18,9 @@ _changes_audit_text = {
     'sso': 'Single sign-on settings changed',
 }
 
-@app.app.route('/settings', methods=['GET'])
-@auth.session_auth
-def settings_get():
-    response = flask.g.administrator.dict()
+def _dict():
     if settings.app.demo_mode:
-        response.update({
+        return {
             'theme': settings.app.theme,
             'auditing': settings.app.auditing,
             'monitoring': settings.app.monitoring,
@@ -50,9 +47,30 @@ def settings_get():
             'routed_subnet6': settings.local.host.routed_subnet6,
             'server_cert': 'demo',
             'server_key': 'demo',
-        })
+            'cloud_provider': settings.app.cloud_provider,
+            'us_east_1_access_key': 'demo',
+            'us_east_1_secret_key': 'demo',
+            'us_west_1_access_key': 'demo',
+            'us_west_1_secret_key': 'demo',
+            'us_west_2_access_key': 'demo',
+            'us_west_2_secret_key': 'demo',
+            'eu_west_1_access_key': 'demo',
+            'eu_west_1_secret_key': 'demo',
+            'eu_central_1_access_key': 'demo',
+            'eu_central_1_secret_key': 'demo',
+            'ap_northeast_1_access_key': 'demo',
+            'ap_northeast_1_secret_key': 'demo',
+            'ap_northeast_2_access_key': 'demo',
+            'ap_northeast_2_secret_key': 'demo',
+            'ap_southeast_1_access_key': 'demo',
+            'ap_southeast_1_secret_key': 'demo',
+            'ap_southeast_2_access_key': 'demo',
+            'ap_southeast_2_secret_key': 'demo',
+            'sa_east_1_access_key': 'demo',
+            'sa_east_1_secret_key': 'demo',
+        }
     else:
-        response.update({
+        return {
             'theme': settings.app.theme,
             'auditing': settings.app.auditing,
             'monitoring': settings.app.monitoring,
@@ -79,7 +97,42 @@ def settings_get():
             'routed_subnet6': settings.local.host.routed_subnet6,
             'server_cert': settings.app.server_cert,
             'server_key': settings.app.server_key,
-        })
+            'cloud_provider': settings.app.cloud_provider,
+            'us_east_1_access_key': settings.app.us_east_1_access_key,
+            'us_east_1_secret_key': settings.app.us_east_1_secret_key,
+            'us_west_1_access_key': settings.app.us_west_1_access_key,
+            'us_west_1_secret_key': settings.app.us_west_1_secret_key,
+            'us_west_2_access_key': settings.app.us_west_2_access_key,
+            'us_west_2_secret_key': settings.app.us_west_2_secret_key,
+            'eu_west_1_access_key': settings.app.eu_west_1_access_key,
+            'eu_west_1_secret_key': settings.app.eu_west_1_secret_key,
+            'eu_central_1_access_key': settings.app.eu_central_1_access_key,
+            'eu_central_1_secret_key': settings.app.eu_central_1_secret_key,
+            'ap_northeast_1_access_key':
+                settings.app.ap_northeast_1_access_key,
+            'ap_northeast_1_secret_key':
+                settings.app.ap_northeast_1_secret_key,
+            'ap_northeast_2_access_key':
+                settings.app.ap_northeast_2_access_key,
+            'ap_northeast_2_secret_key':
+                settings.app.ap_northeast_2_secret_key,
+            'ap_southeast_1_access_key':
+                settings.app.ap_southeast_1_access_key,
+            'ap_southeast_1_secret_key':
+                settings.app.ap_southeast_1_secret_key,
+            'ap_southeast_2_access_key':
+                settings.app.ap_southeast_2_access_key,
+            'ap_southeast_2_secret_key':
+                settings.app.ap_southeast_2_secret_key,
+            'sa_east_1_access_key': settings.app.sa_east_1_access_key,
+            'sa_east_1_secret_key': settings.app.sa_east_1_secret_key,
+        }
+
+@app.app.route('/settings', methods=['GET'])
+@auth.session_auth
+def settings_get():
+    response = flask.g.administrator.dict()
+    response.update(_dict())
     return utils.jsonify(response)
 
 @app.app.route('/settings', methods=['PUT'])
@@ -338,6 +391,45 @@ def settings_put():
         else:
             settings.app.server_key = None
 
+    if 'cloud_provider' in flask.request.json:
+        settings_commit = True
+        cloud_provider = flask.request.json['cloud_provider']
+        if cloud_provider:
+            settings.app.cloud_provider = cloud_provider
+        else:
+            settings.app.cloud_provider = None
+
+    for aws_key in (
+                'us_east_1_access_key',
+                'us_east_1_secret_key',
+                'us_west_1_access_key',
+                'us_west_1_secret_key',
+                'us_west_2_access_key',
+                'us_west_2_secret_key',
+                'eu_west_1_access_key',
+                'eu_west_1_secret_key',
+                'eu_central_1_access_key',
+                'eu_central_1_secret_key',
+                'ap_northeast_1_access_key',
+                'ap_northeast_1_secret_key',
+                'ap_northeast_2_access_key',
+                'ap_northeast_2_secret_key',
+                'ap_southeast_1_access_key',
+                'ap_southeast_1_secret_key',
+                'ap_southeast_2_access_key',
+                'ap_southeast_2_secret_key',
+                'sa_east_1_access_key',
+                'sa_east_1_secret_key',
+            ):
+        if aws_key in flask.request.json:
+            settings_commit = True
+            aws_value = flask.request.json[aws_key]
+
+            if aws_value:
+                setattr(settings.app, aws_key, utils.filter_str(aws_value))
+            else:
+                setattr(settings.app, aws_key, None)
+
     if not settings.app.sso:
         settings.app.sso_match = None
         settings.app.sso_token = None
@@ -370,28 +462,5 @@ def settings_put():
     event.Event(type=SETTINGS_UPDATED)
 
     response = flask.g.administrator.dict()
-    response.update({
-        'theme': settings.app.theme,
-        'auditing': settings.app.auditing,
-        'monitoring': settings.app.monitoring,
-        'datadog_api_key': settings.app.datadog_api_key,
-        'email_from': settings.app.email_from,
-        'email_server': settings.app.email_server,
-        'email_username': settings.app.email_username,
-        'email_password': bool(settings.app.email_password),
-        'pin_mode': settings.user.pin_mode,
-        'sso': settings.app.sso,
-        'sso_match': settings.app.sso_match,
-        'sso_token': settings.app.sso_token,
-        'sso_secret': settings.app.sso_secret,
-        'sso_host': settings.app.sso_host,
-        'sso_admin': settings.app.sso_admin,
-        'sso_org': settings.app.sso_org,
-        'sso_saml_url': settings.app.sso_saml_url,
-        'sso_saml_issuer_url': settings.app.sso_saml_issuer_url,
-        'sso_saml_cert': settings.app.sso_saml_cert,
-        'sso_okta_token': settings.app.sso_okta_token,
-        'sso_onelogin_key': settings.app.sso_onelogin_key,
-        'public_address': settings.local.host.public_addr,
-    })
+    response.update(_dict())
     return utils.jsonify(response)

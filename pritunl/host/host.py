@@ -14,6 +14,8 @@ class Host(mongo.MongoObject):
         'name',
         'hostname',
         'ping_timestamp',
+        'instance_id',
+        'auto_instance_id',
         'status',
         'start_timestamp',
         'public_address',
@@ -81,14 +83,19 @@ class Host(mongo.MongoObject):
 
     @property
     def link_addr(self):
-        return self.link_address or  self.public_address or \
+        return self.link_address or self.public_address or \
             self.auto_public_address
+
+    @property
+    def aws_id(self):
+        return self.instance_id or self.auto_instance_id
 
     def dict(self):
         return {
             'id': self.id,
             'name': self.name,
             'hostname': self.hostname,
+            'instance_id': self.aws_id,
             'status': self.status,
             'uptime': self.uptime,
             'user_count': self.user_count,

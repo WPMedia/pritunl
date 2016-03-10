@@ -1,6 +1,29 @@
 Pritunl Changelog
 =================
 
+<%= version %>
+
+Fix issue with finding network interface for route
+Fix issue with profile sync
+
+Version 1.18.908.31 2016-03-08
+------------------------------
+
+Add support for mongodb ssl when using dns or monitoring
+Fix issue with replicated servers route clean up
+Fix SSL issue with some browsers
+
+Version 1.18.906.35 2016-03-06
+------------------------------
+
+Add server link routes
+Fix configuration issue with virtual network route
+
+Version 1.18.903.84 2016-03-03
+------------------------------
+
+Fix server route display issue
+
 Version 1.18.902.99 2016-03-02
 ------------------------------
 

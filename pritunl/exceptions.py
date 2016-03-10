@@ -68,6 +68,9 @@ class ServerLinkOnlineError(ServerError):
 class ServerLinkCommonHostError(ServerError):
     pass
 
+class ServerLinkCommonRouteError(ServerError):
+    pass
+
 class ServerLinkReplicaError(ServerError):
     pass
 
@@ -84,6 +87,9 @@ class BridgeLookupError(ServerError):
     pass
 
 class ServerRouteNatVirtual(ServerError):
+    pass
+
+class ServerRouteNatServerLink(ServerError):
     pass
 
 
@@ -111,4 +117,11 @@ class AuthError(Exception):
     pass
 
 class AuthForked(Exception):
+    pass
+
+
+class AwsError(BaseError):
+    pass
+
+class VpcRouteTableNotFound(AwsError):
     pass

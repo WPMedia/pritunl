@@ -22,6 +22,7 @@ define([
         'paste .pass input': 'onPassEvent',
         'input .pass input': 'onPassEvent',
         'propertychange .pass input': 'onPassEvent',
+        'change .cloud-provider select': 'onCloudProviderChange',
         'change .monitoring select': 'onMonitoringChange',
         'change .theme select': 'onThemeChange',
         'click .api-token input, .api-secret input': 'onClickInput'
@@ -222,6 +223,14 @@ define([
     onSsoMode: function() {
       this.setSsoMode(this.getSsoMode());
     },
+    onCloudProviderChange: function() {
+      if (this.$('.cloud-provider select').val() === 'aws') {
+        this.$('.aws-settings').slideDown(window.slideTime);
+      }
+      else {
+        this.$('.aws-settings').slideUp(window.slideTime);
+      }
+    },
     onMonitoringChange: function() {
       if (this.$('.monitoring select').val() === 'datadog') {
         this.$('.datadog-api-key').slideDown(window.slideTime);
@@ -281,6 +290,47 @@ define([
       var pinMode = this.$('.pin-mode select').val();
       var serverCert = this.$('.server-cert textarea').val();
       var serverKey = this.$('.server-key textarea').val();
+      var cloudProvider = this.$('.cloud-provider select').val();
+      var usEast1AccessKey = this.$(
+        '.us-east-1-access-key input').val();
+      var usEast1SecretKey = this.$(
+        '.us-east-1-secret-key input').val();
+      var usWest1AccessKey = this.$(
+        '.us-west-1-access-key input').val();
+      var usWest1SecretKey = this.$(
+        '.us-west-1-secret-key input').val();
+      var usWest2AccessKey = this.$(
+        '.us-west-2-access-key input').val();
+      var usWest2SecretKey = this.$(
+        '.us-west-2-secret-key input').val();
+      var euWest1AccessKey = this.$(
+        '.eu-west-1-access-key input').val();
+      var euWest1SecretKey = this.$(
+        '.eu-west-1-secret-key input').val();
+      var euCentral1AccessKey = this.$(
+        '.eu-central-1-access-key input').val();
+      var euCentral1SecretKey = this.$(
+        '.eu-central-1-secret-key input').val();
+      var apNortheast1AccessKey = this.$(
+        '.ap-northeast-1-access-key input').val();
+      var apNortheast1SecretKey = this.$(
+        '.ap-northeast-1-secret-key input').val();
+      var apNortheast2AccessKey = this.$(
+        '.ap-northeast-2-access-key input').val();
+      var apNortheast2SecretKey = this.$(
+        '.ap-northeast-2-secret-key input').val();
+      var apSoutheast1AccessKey = this.$(
+        '.ap-southeast-1-access-key input').val();
+      var apSoutheast1SecretKey = this.$(
+        '.ap-southeast-1-secret-key input').val();
+      var apSoutheast2AccessKey = this.$(
+        '.ap-southeast-2-access-key input').val();
+      var apSoutheast2SecretKey = this.$(
+        '.ap-southeast-2-secret-key input').val();
+      var saEast1AccessKey = this.$(
+        '.sa-east-1-access-key input').val();
+      var saEast1SecretKey = this.$(
+        '.sa-east-1-secret-key input').val();
 
       var sso = this.getSsoMode();
       var ssoMatch = null;
@@ -380,7 +430,28 @@ define([
         routed_subnet6: routedSubnet6,
         theme: theme,
         server_cert: serverCert,
-        server_key: serverKey
+        server_key: serverKey,
+        cloud_provider: cloudProvider,
+        us_east_1_access_key: usEast1AccessKey,
+        us_east_1_secret_key: usEast1SecretKey,
+        us_west_1_access_key: usWest1AccessKey,
+        us_west_1_secret_key: usWest1SecretKey,
+        us_west_2_access_key: usWest2AccessKey,
+        us_west_2_secret_key: usWest2SecretKey,
+        eu_west_1_access_key: euWest1AccessKey,
+        eu_west_1_secret_key: euWest1SecretKey,
+        eu_central_1_access_key: euCentral1AccessKey,
+        eu_central_1_secret_key: euCentral1SecretKey,
+        ap_northeast_1_access_key: apNortheast1AccessKey,
+        ap_northeast_1_secret_key: apNortheast1SecretKey,
+        ap_northeast_2_access_key: apNortheast2AccessKey,
+        ap_northeast_2_secret_key: apNortheast2SecretKey,
+        ap_southeast_1_access_key: apSoutheast1AccessKey,
+        ap_southeast_1_secret_key: apSoutheast1SecretKey,
+        ap_southeast_2_access_key: apSoutheast2AccessKey,
+        ap_southeast_2_secret_key: apSoutheast2SecretKey,
+        sa_east_1_access_key: saEast1AccessKey,
+        sa_east_1_secret_key: saEast1SecretKey
       };
 
       if (!username) {
