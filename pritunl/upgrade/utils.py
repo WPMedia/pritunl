@@ -27,11 +27,11 @@ def database_clean_up():
 def get_collection(collection):
     return getattr(_database, _prefix + collection)
 
-def setup_cert(load_db, server_cert_path, server_key_path):
+def setup_cert(server_cert_path, server_key_path):
     server_cert = None
     server_key = None
 
-    if load_db:
+    if _database:
         settings_collection = get_collection('settings')
         doc = settings_collection.find_one({'_id': 'app'})
         if doc:
@@ -47,3 +47,14 @@ def setup_cert(load_db, server_cert_path, server_key_path):
         with open(server_key_path, 'w') as server_key_file:
             os.chmod(server_key_path, 0600)
             server_key_file.write(server_key)
+
+def get_server_port():
+    port = settings.conf.port
+
+    if _database:
+        settings_collection = get_collection('settings')
+        doc = settings_collection.find_one({'_id': 'app'})
+        if doc:
+            port = doc.get('server_port', 443)
+
+    return port

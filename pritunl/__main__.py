@@ -13,6 +13,7 @@ Command Help: pritunl [command] --help
 Commands:
   start                 Start server
   version               Print the version and exit
+  setup-key             Print the setup key and exit
   reset-password        Reset administrator password
   reset-version         Reset database version to server version
   reset-ssl-cert        Reset the server ssl certificate
@@ -57,6 +58,14 @@ def main(default_conf=None):
 
     if cmd == 'version':
         print '%s v%s' % (pritunl.__title__, pritunl.__version__)
+        sys.exit(0)
+    elif cmd == 'setup-key':
+        from pritunl import setup
+        from pritunl import settings
+
+        setup.setup_loc()
+        print settings.local.setup_key
+
         sys.exit(0)
     elif cmd == 'reset-version':
         from pritunl import setup

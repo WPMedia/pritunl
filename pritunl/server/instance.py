@@ -22,6 +22,7 @@ import threading
 import traceback
 import re
 import collections
+import pymongo
 
 _resource_locks = collections.defaultdict(threading.Lock)
 
@@ -43,6 +44,7 @@ class ServerInstance(object):
         self.iptables_lock = threading.Lock()
         self.tun_nat = False
         self.server_links = []
+        self.route_advertisements = set()
         self._temp_path = utils.get_temp_path()
         self.ovpn_conf_path = os.path.join(self._temp_path,
             OVPN_CONF_NAME)
@@ -56,6 +58,10 @@ class ServerInstance(object):
     @cached_static_property
     def user_collection(cls):
         return mongo.get_collection('users')
+
+    @cached_static_property
+    def routes_collection(cls):
+        return mongo.get_collection('routes_reserve')
 
     def get_cursor_id(self):
         return messenger.get_cursor_id('servers')
@@ -350,32 +356,231 @@ class ServerInstance(object):
                 )
         routes6.reverse()
 
-        rules.append(['INPUT', '-i', self.interface, '-j', 'ACCEPT'])
-        rules.append(['FORWARD', '-i', self.interface, '-j', 'ACCEPT'])
-        if self.server.ipv6:
-            if self.server.ipv6_firewall and \
-                    settings.local.host.routed_subnet6:
-                rules6.append(
-                    ['INPUT', '-d', self.server.network6, '-j', 'DROP'])
-                rules6.append(
-                    ['INPUT', '-d', self.server.network6, '-m', 'conntrack',
-                     '--ctstate','RELATED,ESTABLISHED', '-j', 'ACCEPT'])
-                rules6.append(
-                    ['INPUT', '-d', self.server.network6, '-p', 'icmpv6',
-                     '-m', 'conntrack', '--ctstate', 'NEW', '-j', 'ACCEPT'])
-                rules6.append(
-                    ['FORWARD', '-d', self.server.network6, '-j', 'DROP'])
-                rules6.append(
-                    ['FORWARD', '-d', self.server.network6, '-m', 'conntrack',
-                     '--ctstate', 'RELATED,ESTABLISHED', '-j', 'ACCEPT'])
-                rules6.append(
-                    ['FORWARD', '-d', self.server.network6, '-p', 'icmpv6',
-                     '-m', 'conntrack', '--ctstate', 'NEW', '-j', 'ACCEPT'])
+        route_all = self.server.is_route_all()
+        if route_all:
+            rules.append([
+                'INPUT',
+                '-i', self.interface,
+                '-j', 'ACCEPT',
+            ])
+            rules.append([
+                'OUTPUT',
+                '-o', self.interface,
+                '-j', 'ACCEPT',
+            ])
+            rules.append([
+                'FORWARD',
+                '-i', self.interface,
+                '-j', 'ACCEPT',
+            ])
+            if self.server.ipv6:
+                if self.server.ipv6_firewall and \
+                        settings.local.host.routed_subnet6:
+                    rules6.append([
+                        'INPUT',
+                        '-d', self.server.network6,
+                         '-m', 'conntrack',
+                         '--ctstate','RELATED,ESTABLISHED',
+                         '-j', 'ACCEPT',
+                    ])
+                    rules6.append([
+                        'INPUT',
+                        '-d', self.server.network6,
+                        '-p', 'icmpv6',
+                         '-m', 'conntrack',
+                        '--ctstate', 'NEW',
+                        '-j', 'ACCEPT',
+                    ])
+
+                    rules6.append([
+                        'INPUT',
+                        '-d', self.server.network6,
+                        '-j', 'DROP',
+                    ])
+
+                    rules6.append([
+                        'FORWARD',
+                        '-d', self.server.network6,
+                        '-m', 'conntrack',
+                         '--ctstate', 'RELATED,ESTABLISHED',
+                        '-j', 'ACCEPT',
+                    ])
+                    rules6.append([
+                        'FORWARD',
+                        '-d', self.server.network6,
+                        '-p', 'icmpv6',
+                         '-m', 'conntrack',
+                        '--ctstate', 'NEW',
+                        '-j', 'ACCEPT',
+                    ])
+
+                    rules6.append([
+                        'FORWARD',
+                        '-d', self.server.network6,
+                        '-j', 'DROP',
+                    ])
+                else:
+                    rules6.append([
+                        'INPUT',
+                        '-d', self.server.network6,
+                        '-j', 'ACCEPT',
+                    ])
+                    rules6.append([
+                        'FORWARD',
+                        '-d', self.server.network6,
+                        '-j', 'ACCEPT',
+                    ])
+        elif self.server.restrict_routes:
+            if self.server.inter_client:
+                rules.append([
+                    'INPUT', '-i', self.interface,
+                    '-d', self.server.network,
+                    '-j', 'ACCEPT',
+                ])
+                rules6.append([
+                    'INPUT', '-i', self.interface,
+                    '-d', self.server.network6,
+                    '-j', 'ACCEPT',
+                ])
+                rules.append([
+                    'OUTPUT', '-o', self.interface,
+                    '-s', self.server.network,
+                    '-j', 'ACCEPT',
+                ])
+                rules6.append([
+                    'OUTPUT', '-o', self.interface,
+                    '-s', self.server.network6,
+                    '-j', 'ACCEPT',
+                ])
+                rules.append([
+                    'FORWARD', '-i', self.interface,
+                    '-d', self.server.network,
+                    '-j', 'ACCEPT',
+                ])
+                rules.append([
+                    'FORWARD', '-o', self.interface,
+                    '-s', self.server.network,
+                    '-j', 'ACCEPT',
+                ])
+                rules6.append([
+                    'FORWARD', '-i', self.interface,
+                    '-d', self.server.network6,
+                    '-j', 'ACCEPT',
+                ])
+                rules6.append([
+                    'FORWARD', '-o', self.interface,
+                    '-s', self.server.network6,
+                    '-j', 'ACCEPT',
+                ])
             else:
-                rules6.append(
-                    ['INPUT', '-d', self.server.network6, '-j', 'ACCEPT'])
-                rules6.append(
-                    ['FORWARD', '-d', self.server.network6, '-j', 'ACCEPT'])
+                server_addr = utils.get_network_gateway(self.server.network)
+                server_addr6 = utils.get_network_gateway(self.server.network6)
+                rules.append([
+                    'INPUT', '-i', self.interface,
+                    '-d', server_addr,
+                    '-j', 'ACCEPT',
+                ])
+                rules6.append([
+                    'INPUT', '-i', self.interface,
+                    '-d', server_addr6,
+                    '-j', 'ACCEPT',
+                ])
+                rules.append([
+                    'OUTPUT', '-o', self.interface,
+                    '-s', server_addr,
+                    '-j', 'ACCEPT',
+                ])
+                rules6.append([
+                    'OUTPUT', '-o', self.interface,
+                    '-s', server_addr6,
+                    '-j', 'ACCEPT',
+                ])
+
+            for route in self.server.get_routes(
+                        include_hidden=True,
+                        include_server_links=True,
+                        include_default=False,
+                    ):
+                network_address = route['network']
+                is6 = ':' in network_address
+                is_nat = route['nat']
+
+                if route['virtual_network']:
+                    continue
+
+                if self.server.restrict_routes:
+                    if is6:
+                        rules6.append([
+                            'INPUT',
+                            '-i', self.interface,
+                            '-d', network_address,
+                            '-j', 'ACCEPT',
+                        ])
+                        rules6.append([
+                            'OUTPUT',
+                            '-o', self.interface,
+                            '-s', network_address,
+                            '-j', 'ACCEPT',
+                        ])
+                        rules6.append([
+                            'FORWARD',
+                            '-i', self.interface,
+                            '-d', network_address,
+                            '-j', 'ACCEPT',
+                        ])
+
+                        if is_nat:
+                            rules6.append([
+                                'FORWARD',
+                                '-o', self.interface,
+                                '-m', 'conntrack',
+                                '--ctstate', 'RELATED,ESTABLISHED',
+                                '-s', network_address,
+                                '-j', 'ACCEPT',
+                            ])
+                        else:
+                            rules6.append([
+                                'FORWARD',
+                                '-o', self.interface,
+                                '-s', network_address,
+                                '-j', 'ACCEPT',
+                            ])
+                    else:
+                        rules.append([
+                            'INPUT',
+                            '-i', self.interface,
+                            '-d', network_address,
+                            '-j', 'ACCEPT',
+                        ])
+                        rules.append([
+                            'OUTPUT',
+                            '-o', self.interface,
+                            '-s', network_address,
+                            '-j', 'ACCEPT',
+                        ])
+                        rules.append([
+                            'FORWARD',
+                            '-i', self.interface,
+                            '-d', network_address,
+                            '-j', 'ACCEPT',
+                        ])
+
+                        if is_nat:
+                            rules.append([
+                                'FORWARD',
+                                '-o', self.interface,
+                                '-m', 'conntrack',
+                                '--ctstate', 'RELATED,ESTABLISHED',
+                                '-s', network_address,
+                                '-j', 'ACCEPT',
+                            ])
+                        else:
+                            rules.append([
+                                'FORWARD',
+                                '-o', self.interface,
+                                '-s', network_address,
+                                '-j', 'ACCEPT',
+                            ])
 
         interfaces = set()
         interfaces6 = set()
@@ -454,46 +659,47 @@ class ServerInstance(object):
                 else:
                     rules.append(args_base + ['-s', link_svr_net])
 
-        for interface in interfaces:
-            rules.append([
-                'FORWARD',
-                '-i', interface,
-                '-o', self.interface,
-                '-m', 'state',
-                '--state', 'ESTABLISHED,RELATED',
-                '-j', 'ACCEPT',
-            ])
-            rules.append([
-                'FORWARD',
-                '-i', self.interface,
-                '-o', interface,
-                '-m', 'state',
-                '--state', 'ESTABLISHED,RELATED',
-                '-j', 'ACCEPT',
-            ])
+        if route_all:
+            for interface in interfaces:
+                rules.append([
+                    'FORWARD',
+                    '-i', interface,
+                    '-o', self.interface,
+                    '-m', 'state',
+                    '--state', 'ESTABLISHED,RELATED',
+                    '-j', 'ACCEPT',
+                ])
+                rules.append([
+                    'FORWARD',
+                    '-i', self.interface,
+                    '-o', interface,
+                    '-m', 'state',
+                    '--state', 'ESTABLISHED,RELATED',
+                    '-j', 'ACCEPT',
+                ])
 
-        for interface in interfaces6:
-            if self.server.ipv6 and self.server.ipv6_firewall and \
-                    settings.local.host.routed_subnet6 and \
-                    interface == default_interface6:
-                continue
+            for interface in interfaces6:
+                if self.server.ipv6 and self.server.ipv6_firewall and \
+                        settings.local.host.routed_subnet6 and \
+                        interface == default_interface6:
+                    continue
 
-            rules6.append([
-                'FORWARD',
-                '-i', interface,
-                '-o', self.interface,
-                '-m', 'state',
-                '--state', 'ESTABLISHED,RELATED',
-                '-j', 'ACCEPT',
-            ])
-            rules6.append([
-                'FORWARD',
-                '-i', self.interface,
-                '-o', interface,
-                '-m', 'state',
-                '--state', 'ESTABLISHED,RELATED',
-                '-j', 'ACCEPT',
-            ])
+                rules6.append([
+                    'FORWARD',
+                    '-i', interface,
+                    '-o', self.interface,
+                    '-m', 'state',
+                    '--state', 'ESTABLISHED,RELATED',
+                    '-j', 'ACCEPT',
+                ])
+                rules6.append([
+                    'FORWARD',
+                    '-i', self.interface,
+                    '-o', interface,
+                    '-m', 'state',
+                    '--state', 'ESTABLISHED,RELATED',
+                    '-j', 'ACCEPT',
+                ])
 
         extra_args = [
             '-m', 'comment',
@@ -850,6 +1056,47 @@ class ServerInstance(object):
         except GeneratorExit:
             self.stop_process()
 
+    @interrupter
+    def _route_ad_keep_alive_thread(self):
+        try:
+            while not self.interrupt:
+                try:
+                    for ra_id in self.route_advertisements.copy():
+                        yield
+
+                        response = self.routes_collection.update_one({
+                            '_id': ra_id,
+                            'instance_id': self.id,
+                        }, {'$set': {
+                            'timestamp': utils.now(),
+                        }})
+
+                        if not response.modified_count:
+                            logger.error(
+                                'Lost route advertisement reserve',
+                                'server',
+                                server_id=self.server.id,
+                                instance_id=self.id,
+                                route_id=ra_id,
+                            )
+                            try:
+                                self.route_advertisements.remove(ra_id)
+                            except KeyError:
+                                pass
+
+                    yield
+                except:
+                    logger.exception(
+                        'Failed to update route advertisement',
+                        'server',
+                        server_id=self.server.id,
+                    )
+                    time.sleep(1)
+
+                yield interrupter_sleep(settings.vpn.route_ping)
+        except GeneratorExit:
+            pass
+
     def _iptables_thread(self):
         if self.interrupter_sleep(settings.vpn.iptables_update_rate):
             return
@@ -866,12 +1113,67 @@ class ServerInstance(object):
                 )
                 time.sleep(1)
 
+    def init_route_advertisements(self):
+        for route in self.server.get_routes(include_server_links=True):
+            vpc_region = route['vpc_region']
+            vpc_id = route['vpc_id']
+            network = route['network']
+
+            if vpc_region and vpc_id:
+                self.reserve_route_advertisement(
+                    vpc_region, vpc_id, network)
+                self.reserve_route_advertisement(
+                    vpc_region, vpc_id, network)
+
+    def clear_route_advertisements(self):
+        for ra_id in self.route_advertisements.copy():
+            self.routes_collection.delete_one({
+                '_id': ra_id,
+            })
+
+    def reserve_route_advertisement(self, vpc_region, vpc_id, network):
+        ra_id = '%s_%s_%s' % (self.server.id, vpc_id, network)
+        timestamp_spec = utils.now() - datetime.timedelta(
+            seconds=settings.vpn.route_ping_ttl)
+
+        try:
+            self.routes_collection.update_one({
+                '_id': ra_id,
+                'timestamp': {'$lt': timestamp_spec},
+            }, {'$set': {
+                'instance_id': self.id,
+                'server_id': self.server.id,
+                'vpc_region': vpc_region,
+                'vpc_id': vpc_id,
+                'network': network,
+                'timestamp': utils.now(),
+            }}, upsert=True)
+
+            utils.add_vpc_route(vpc_region, vpc_id, network,
+                settings.local.host.aws_id)
+
+            self.route_advertisements.add(ra_id)
+        except pymongo.errors.DuplicateKeyError:
+            return
+        except:
+            logger.exception('Failed to add vpc route', 'server',
+                server_id=self.server.id,
+                instance_id=self.id,
+                vpc_region=vpc_region,
+                vpc_id=vpc_id,
+                network=network,
+            )
+
     def start_threads(self, cursor_id):
         thread = threading.Thread(target=self._sub_thread, args=(cursor_id,))
         thread.daemon = True
         thread.start()
 
         thread = threading.Thread(target=self._keep_alive_thread)
+        thread.daemon = True
+        thread.start()
+
+        thread = threading.Thread(target=self._route_ad_keep_alive_thread)
         thread.daemon = True
         thread.start()
 
@@ -907,6 +1209,8 @@ class ServerInstance(object):
             self.iptables_rules, self.ip6tables_rules = \
                 self.generate_iptables_rules()
             self.set_iptables_rules()
+
+            self.init_route_advertisements()
 
             self.process = self.openvpn_start()
             if not self.process:

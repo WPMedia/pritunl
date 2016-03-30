@@ -22,6 +22,7 @@ import hmac
 import json
 import uuid
 import pymongo
+import urllib
 
 class User(mongo.MongoObject):
     fields = {
@@ -263,12 +264,30 @@ class User(mongo.MongoObject):
             try:
                 resp = utils.request.get(AUTH_SERVER +
                     '/update/google?user=%s&license=%s' % (
-                        self.email, settings.app.license))
+                        urllib.quote(self.email),
+                        settings.app.license,
+                    ))
 
                 if resp.status_code == 200:
                     return True
             except:
                 logger.exception('Google auth check error', 'user',
+                    user_id=self.id,
+                )
+            return False
+        elif SLACK_AUTH in self.auth_type:
+            try:
+                resp = utils.request.get(AUTH_SERVER +
+                    '/update/slack?user=%s&team=%s&license=%s' % (
+                        urllib.quote(self.name),
+                        urllib.quote(settings.app.sso_match[0]),
+                        settings.app.license,
+                    ))
+
+                if resp.status_code == 200:
+                    return True
+            except:
+                logger.exception('Slack auth check error', 'user',
                     user_id=self.id,
                 )
             return False
@@ -710,9 +729,16 @@ class User(mongo.MongoObject):
         if not self.pin or not test_pin:
             return False
 
-        _, pin_salt, pin_hash = self.pin.split('$')
+        hash_ver, pin_salt, pin_hash = self.pin.split('$')
 
-        test_hash = base64.b64encode(auth.hash_pin_v1(pin_salt, test_pin))
+        if hash_ver == '1':
+            hash_func = auth.hash_pin_v1
+        elif hash_ver == '2':
+            hash_func = auth.hash_pin_v2
+        else:
+            raise ValueError('Unknown hash version')
+
+        test_hash = base64.b64encode(hash_func(pin_salt, test_pin))
         return test_hash == pin_hash
 
     def set_pin(self, pin):
@@ -722,7 +748,7 @@ class User(mongo.MongoObject):
             return changed
 
         changed = not self.check_pin(pin)
-        self.pin = auth.generate_hash_pin_v1(pin)
+        self.pin = auth.generate_hash_pin_v2(pin)
         return changed
 
     def send_key_email(self, key_link_domain):

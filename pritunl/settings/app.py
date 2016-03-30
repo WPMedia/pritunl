@@ -3,6 +3,9 @@ from pritunl.settings.group_mongo import SettingsGroupMongo
 class SettingsApp(SettingsGroupMongo):
     group = 'app'
     fields = {
+        'server_ssl': True,
+        'server_port': 443,
+        'redirect_server': True,
         'demo_mode': False,
         'allow_insecure_session': False,
         'auditing': None,
@@ -23,6 +26,7 @@ class SettingsApp(SettingsGroupMongo):
         'log_limit': 10000,
         'log_entry_limit': 50,
         'log_db_delay': 1,
+        'log_web_errors': False,
         'rate_limit_sleep': 0.5,
         'short_url_length': 8,
         'license': None,
@@ -47,7 +51,6 @@ class SettingsApp(SettingsGroupMongo):
         'sso': False,
         'sso_match': None,
         'sso_host': None,
-        'sso_admin': None,
         'sso_token': None,
         'sso_secret': None,
         'sso_timeout': 60,
@@ -70,6 +73,11 @@ class SettingsApp(SettingsGroupMongo):
         'org_page_count': 5,
         'server_page_count': 3,
         'host_page_count': 10,
+        'acme_api_url': 'https://acme-v01.api.letsencrypt.org',
+        'acme_timestamp': None,
+        'acme_key': None,
+        'acme_domain': None,
+        'acme_renew': 2592000,
         'server_cert': None,
         'server_key': None,
         'cloud_provider': None,

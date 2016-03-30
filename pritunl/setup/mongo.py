@@ -89,6 +89,7 @@ def setup_mongo():
             prefix + 'servers_output_link'),
         'servers_bandwidth': getattr(database, prefix + 'servers_bandwidth'),
         'servers_ip_pool': getattr(database, prefix + 'servers_ip_pool'),
+        'routes_reserve': getattr(database, prefix + 'routes_reserve'),
         'dh_params': getattr(database, prefix + 'dh_params'),
         'auth_sessions': getattr(database, prefix + 'auth_sessions'),
         'auth_nonces': getattr(database, prefix + 'auth_nonces'),
@@ -213,6 +214,8 @@ def setup_mongo():
         ('user_id', pymongo.ASCENDING),
     ], background=True)
     upsert_index(mongo.collections['servers_ip_pool'], 'user_id',
+        background=True)
+    upsert_index(mongo.collections['routes_reserve'], 'timestamp',
         background=True)
     upsert_index(mongo.collections['dh_params'], 'dh_param_bits',
         background=True)

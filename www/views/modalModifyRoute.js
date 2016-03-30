@@ -20,6 +20,9 @@ define([
     body: function() {
       return this.template(this.model.toJSON());
     },
+    postRender: function() {
+      this.$('.label').tooltip();
+    },
     getNatRouteSelect: function() {
       return this.$('.nat-route-toggle .selector').hasClass('selected');
     },
@@ -38,10 +41,14 @@ define([
     },
     onOk: function() {
       var nat = this.getNatRouteSelect();
+      var vpcRegion = this.$('.vpc-region select').val();
+      var vpcId = this.$('.vpc-id input').val();
 
       this.setLoading('Modifying route...');
       this.model.save({
-        nat: nat
+        nat: nat,
+        vpc_region: vpcRegion,
+        vpc_id: vpcId
       }, {
         success: function() {
           this.close(true);

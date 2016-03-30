@@ -31,6 +31,8 @@ define([
     initialize: function(options) {
       this.orgs = new OrgCollection();
       this.initial = options.initial;
+      this.curServerPort = this.model.get('server_port');
+      this.curAcmeDomain = this.model.get('acme_domain') || null;
       if (this.initial) {
         this.title = 'Initial Setup';
         this.cancelText = 'Setup Later';
@@ -70,11 +72,11 @@ define([
     },
     setSsoMode: function(mode) {
       if (!mode) {
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-token').slideUp(window.slideTime);
         this.$('.sso-secret').slideUp(window.slideTime);
         this.$('.sso-host').slideUp(window.slideTime);
-        this.$('.sso-admin').slideUp(window.slideTime);
         this.$('.sso-org').slideUp(window.slideTime);
         this.$('.sso-saml-url').slideUp(window.slideTime);
         this.$('.sso-saml-issuer-url').slideUp(window.slideTime);
@@ -92,8 +94,8 @@ define([
         this.$('.sso-token').slideUp(window.slideTime);
         this.$('.sso-secret').slideUp(window.slideTime);
         this.$('.sso-host').slideUp(window.slideTime);
-        this.$('.sso-admin').slideUp(window.slideTime);
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-okta-token').slideUp(window.slideTime);
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
@@ -102,7 +104,8 @@ define([
         this.$('.sso-saml-issuer-url').slideDown(window.slideTime);
         this.$('.sso-saml-cert').slideDown(window.slideTime);
       } else if (mode === 'saml_duo') {
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-okta-token').slideUp(window.slideTime);
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
@@ -110,7 +113,6 @@ define([
         this.$('.sso-token').slideDown(window.slideTime);
         this.$('.sso-secret').slideDown(window.slideTime);
         this.$('.sso-host').slideDown(window.slideTime);
-        this.$('.sso-admin').slideDown(window.slideTime);
         this.$('.sso-saml-url').slideDown(window.slideTime);
         this.$('.sso-saml-issuer-url').slideDown(window.slideTime);
         this.$('.sso-saml-cert').slideDown(window.slideTime);
@@ -118,8 +120,8 @@ define([
         this.$('.sso-token').slideUp(window.slideTime);
         this.$('.sso-secret').slideUp(window.slideTime);
         this.$('.sso-host').slideUp(window.slideTime);
-        this.$('.sso-admin').slideUp(window.slideTime);
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
         this.$('.sso-radius-secret').slideUp(window.slideTime);
@@ -128,14 +130,14 @@ define([
         this.$('.sso-saml-cert').slideDown(window.slideTime);
         this.$('.sso-okta-token').slideDown(window.slideTime);
       } else if (mode === 'saml_okta_duo') {
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
         this.$('.sso-radius-secret').slideUp(window.slideTime);
         this.$('.sso-token').slideDown(window.slideTime);
         this.$('.sso-secret').slideDown(window.slideTime);
         this.$('.sso-host').slideDown(window.slideTime);
-        this.$('.sso-admin').slideDown(window.slideTime);
         this.$('.sso-saml-url').slideDown(window.slideTime);
         this.$('.sso-saml-issuer-url').slideDown(window.slideTime);
         this.$('.sso-saml-cert').slideDown(window.slideTime);
@@ -144,8 +146,8 @@ define([
         this.$('.sso-token').slideUp(window.slideTime);
         this.$('.sso-secret').slideUp(window.slideTime);
         this.$('.sso-host').slideUp(window.slideTime);
-        this.$('.sso-admin').slideUp(window.slideTime);
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-okta-token').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
         this.$('.sso-radius-secret').slideUp(window.slideTime);
@@ -154,18 +156,31 @@ define([
         this.$('.sso-saml-cert').slideDown(window.slideTime);
         this.$('.sso-onelogin-key').slideDown(window.slideTime);
       } else if (mode === 'saml_onelogin_duo') {
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-okta-token').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
         this.$('.sso-radius-secret').slideUp(window.slideTime);
         this.$('.sso-token').slideDown(window.slideTime);
         this.$('.sso-secret').slideDown(window.slideTime);
         this.$('.sso-host').slideDown(window.slideTime);
-        this.$('.sso-admin').slideDown(window.slideTime);
         this.$('.sso-saml-url').slideDown(window.slideTime);
         this.$('.sso-saml-issuer-url').slideDown(window.slideTime);
         this.$('.sso-saml-cert').slideDown(window.slideTime);
         this.$('.sso-onelogin-key').slideDown(window.slideTime);
+      } else if (mode === 'slack') {
+        this.$('.sso-saml-url').slideUp(window.slideTime);
+        this.$('.sso-saml-issuer-url').slideUp(window.slideTime);
+        this.$('.sso-saml-cert').slideUp(window.slideTime);
+        this.$('.sso-token').slideUp(window.slideTime);
+        this.$('.sso-secret').slideUp(window.slideTime);
+        this.$('.sso-host').slideUp(window.slideTime);
+        this.$('.sso-okta-token').slideUp(window.slideTime);
+        this.$('.sso-onelogin-key').slideUp(window.slideTime);
+        this.$('.sso-radius-host').slideUp(window.slideTime);
+        this.$('.sso-radius-secret').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideDown(window.slideTime);
       } else if (mode === 'google') {
         this.$('.sso-saml-url').slideUp(window.slideTime);
         this.$('.sso-saml-issuer-url').slideUp(window.slideTime);
@@ -173,12 +188,25 @@ define([
         this.$('.sso-token').slideUp(window.slideTime);
         this.$('.sso-secret').slideUp(window.slideTime);
         this.$('.sso-host').slideUp(window.slideTime);
-        this.$('.sso-admin').slideUp(window.slideTime);
         this.$('.sso-okta-token').slideUp(window.slideTime);
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
         this.$('.sso-radius-secret').slideUp(window.slideTime);
-        this.$('.sso-match').slideDown(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideDown(window.slideTime);
+      } else if (mode === 'slack_duo') {
+        this.$('.sso-saml-url').slideUp(window.slideTime);
+        this.$('.sso-saml-issuer-url').slideUp(window.slideTime);
+        this.$('.sso-saml-cert').slideUp(window.slideTime);
+        this.$('.sso-okta-token').slideUp(window.slideTime);
+        this.$('.sso-onelogin-key').slideUp(window.slideTime);
+        this.$('.sso-radius-host').slideUp(window.slideTime);
+        this.$('.sso-radius-secret').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideDown(window.slideTime);
+        this.$('.sso-token').slideDown(window.slideTime);
+        this.$('.sso-secret').slideDown(window.slideTime);
+        this.$('.sso-host').slideDown(window.slideTime);
       } else if (mode === 'google_duo') {
         this.$('.sso-saml-url').slideUp(window.slideTime);
         this.$('.sso-saml-issuer-url').slideUp(window.slideTime);
@@ -187,24 +215,24 @@ define([
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
         this.$('.sso-radius-secret').slideUp(window.slideTime);
-        this.$('.sso-match').slideDown(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideDown(window.slideTime);
         this.$('.sso-token').slideDown(window.slideTime);
         this.$('.sso-secret').slideDown(window.slideTime);
         this.$('.sso-host').slideDown(window.slideTime);
-        this.$('.sso-admin').slideDown(window.slideTime);
       } else if (mode === 'duo') {
         this.$('.sso-saml-url').slideUp(window.slideTime);
         this.$('.sso-saml-issuer-url').slideUp(window.slideTime);
         this.$('.sso-saml-cert').slideUp(window.slideTime);
         this.$('.sso-okta-token').slideUp(window.slideTime);
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideUp(window.slideTime);
         this.$('.sso-radius-secret').slideUp(window.slideTime);
         this.$('.sso-token').slideDown(window.slideTime);
         this.$('.sso-secret').slideDown(window.slideTime);
         this.$('.sso-host').slideDown(window.slideTime);
-        this.$('.sso-admin').slideDown(window.slideTime);
       } else if (mode === 'radius') {
         this.$('.sso-saml-url').slideUp(window.slideTime);
         this.$('.sso-saml-issuer-url').slideUp(window.slideTime);
@@ -212,10 +240,10 @@ define([
         this.$('.sso-token').slideUp(window.slideTime);
         this.$('.sso-secret').slideUp(window.slideTime);
         this.$('.sso-host').slideUp(window.slideTime);
-        this.$('.sso-admin').slideUp(window.slideTime);
         this.$('.sso-okta-token').slideUp(window.slideTime);
         this.$('.sso-onelogin-key').slideUp(window.slideTime);
-        this.$('.sso-match').slideUp(window.slideTime);
+        this.$('.sso-match-slack').slideUp(window.slideTime);
+        this.$('.sso-match-google').slideUp(window.slideTime);
         this.$('.sso-radius-host').slideDown(window.slideTime);
         this.$('.sso-radius-secret').slideDown(window.slideTime);
       }
@@ -277,6 +305,8 @@ define([
       var password = this.$('.pass input').val();
       var verifyPassword = this.$('.verify-pass input').val();
       var auditing = this.$('.auditing select').val();
+      var serverPort = this.$('.server-port input').val();
+      var acmeDomain = this.$('.acme-domain input').val() || null;
       var monitoring = this.$('.monitoring select').val();
       var datadogAPiKey = this.$('.datadog-api-key input').val();
       var publicAddress = this.$('.public-address input').val();
@@ -332,12 +362,16 @@ define([
       var saEast1SecretKey = this.$(
         '.sa-east-1-secret-key input').val();
 
+      if (serverPort) {
+        serverPort = parseInt(serverPort, 10);
+      }
+
+      var i;
       var sso = this.getSsoMode();
       var ssoMatch = null;
       var ssoToken = null;
       var ssoSecret = null;
       var ssoHost = null;
-      var ssoAdmin = null;
       var ssoOrg = null;
       var ssoSamlUrl = null;
       var ssoSamlIssuerUrl = null;
@@ -369,7 +403,6 @@ define([
           ssoToken = this.$('.sso-token input').val();
           ssoSecret = this.$('.sso-secret input').val();
           ssoHost = this.$('.sso-host input').val();
-          ssoAdmin = this.$('.sso-admin input').val();
         }
 
         if (sso === 'saml' || sso === 'saml_duo' || sso === 'saml_okta' ||
@@ -388,9 +421,21 @@ define([
         }
 
         if (sso === 'google' || sso === 'google_duo') {
-          ssoMatch = this.$('.sso-match input').val().split(',');
+          ssoMatch = this.$('.sso-match-google input').val().split(',');
 
-          for (var i = 0; i < ssoMatch.length; i++) {
+          for (i = 0; i < ssoMatch.length; i++) {
+            ssoMatch[i] = ssoMatch[i].replace(/^\s\s*/,
+              '').replace(/\s\s*$/, '');
+          }
+        }
+
+        if (sso === 'slack' || sso === 'slack_duo') {
+          ssoMatch = this.$('.sso-match-slack input').val().split(',');
+          if (ssoMatch.length) {
+            ssoMatch = [ssoMatch[0]];
+          }
+
+          for (i = 0; i < ssoMatch.length; i++) {
             ssoMatch[i] = ssoMatch[i].replace(/^\s\s*/,
               '').replace(/\s\s*$/, '');
           }
@@ -418,7 +463,6 @@ define([
         sso_token: ssoToken,
         sso_secret: ssoSecret,
         sso_host: ssoHost,
-        sso_admin: ssoAdmin,
         sso_org: ssoOrg,
         sso_saml_url: ssoSamlUrl,
         sso_saml_issuer_url: ssoSamlIssuerUrl,
@@ -429,8 +473,10 @@ define([
         public_address6: publicAddress6,
         routed_subnet6: routedSubnet6,
         theme: theme,
+        server_port: serverPort,
         server_cert: serverCert,
         server_key: serverKey,
+        acme_domain: acmeDomain,
         cloud_provider: cloudProvider,
         us_east_1_access_key: usEast1AccessKey,
         us_east_1_secret_key: usEast1SecretKey,
@@ -471,6 +517,20 @@ define([
         success: function() {
           window.sso = sso;
           this.close(true);
+
+          if (serverPort !== this.curServerPort) {
+            setTimeout(function() {
+              window.location = window.location.protocol + '//' +
+                window.location.hostname +
+                (serverPort === '443' || !serverPort ? '' : ':' +
+                  serverPort) +
+                window.location.pathname;
+            }, 8000);
+          } else if (acmeDomain !== this.curAcmeDomain) {
+            setTimeout(function() {
+              window.location.reload();
+            }, 8000);
+          }
         }.bind(this),
         error: function(model, response) {
           this.clearLoading();
