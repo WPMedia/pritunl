@@ -59,19 +59,6 @@ MONGO_ACTION_METHODS = {
     'upsert',
 }
 
-AWS_REGIONS = {
-    'us-east-1',
-    'us-west-1',
-    'us-west-2',
-    'eu-west-1',
-    'eu-central-1',
-    'ap-northeast-1',
-    'ap-northeast-2',
-    'ap-southeast-1',
-    'ap-southeast-2',
-    'sa-east-1',
-}
-
 OK = 'ok'
 DISABLED = 'disabled'
 
@@ -204,26 +191,6 @@ DEMO_ADMIN_AUDIT_EVENTS = [
     },
 ]
 
-DEMO_OUTPUT = [
-    '[us-east] Mon Dec 28 04:01:00 2015 OpenVPN 2.3.6 x86_64-redhat' +
-        '-linux-gnu [SSL (OpenSSL)] [LZO] [EPOLL] [PKCS11] [MH] [IPv6] ' +
-        'built on Dec 10 2014',
-    '[us-east] Mon Dec 28 04:01:00 2015 library versions: OpenSSL 1.0.1k-' +
-        'fips 8 Jan 2015, LZO 2.08',
-    '[us-east] Mon Dec 28 04:01:00 2015 Control Channel Authentication: ' +
-        'tls-auth using INLINE static key file',
-    '[us-east] Mon Dec 28 04:01:00 2015 TUN/TAP device tun19 opened',
-    '[us-east] Mon Dec 28 04:01:00 2015 do_ifconfig, tt->ipv6=0, ' +
-        'tt->did_ifconfig_ipv6_setup=0',
-    '[us-east] Mon Dec 28 04:01:00 2015 /sbin/ip link set dev ' +
-        'tun19 up mtu 1500',
-    '[us-east] Mon Dec 28 04:01:00 2015 /sbin/ip addr add dev ' +
-        'tun19 10.100.0.1/16 broadcast 10.100.255.255',
-    '[us-east] Mon Dec 28 04:01:00 2015 UDPv4 link local (bound): [undef]',
-    '[us-east] Mon Dec 28 04:01:00 2015 UDPv4 link remote: [undef]',
-    '[us-east] Mon Dec 28 04:01:00 2015 Initialization Sequence Completed',
-]
-
 GROUP_MONGO = 'mongo'
 GROUP_FILE = 'file'
 GROUP_LOCAL = 'local'
@@ -338,8 +305,6 @@ LOCAL_AUTH = 'local'
 DUO_AUTH = 'duo'
 GOOGLE_AUTH = 'google'
 GOOGLE_DUO_AUTH = 'google_duo'
-SLACK_AUTH = 'slack'
-SLACK_DUO_AUTH = 'slack_duo'
 SAML_AUTH = 'saml'
 SAML_DUO_AUTH = 'saml_duo'
 SAML_OKTA_AUTH = 'saml_okta'
@@ -503,10 +468,6 @@ AUTH_DISABLED_MSG = 'Authentication credentials are disabled.'
 AUTH_OTP_REQUIRED = 'auth_otp_required'
 AUTH_OTP_REQUIRED_MSG = 'Two-factor authentication required.'
 
-ACME_ERROR = 'acme_error'
-ACME_ERROR_MSG = 'Error getting LetsEncrypt certificate check ' + \
-    'the logs for more information.'
-
 NETWORK_INVALID = 'network_invalid'
 NETWORK_INVALID_MSG = 'Network address is not valid, format must be ' + \
     '"[10,172,192].[0-255,16-31,168].[0-255].0/[8-24]" ' + \
@@ -528,9 +489,6 @@ DNS_SERVER_INVALID_MSG = 'DNS server is not valid, ' + \
 
 PORT_INVALID = 'port_invalid'
 PORT_INVALID_MSG = 'Port number is not valid, must be between 1 and 65535.'
-
-PORT_RESERVED = 'port_reserved'
-PORT_RESERVED_MSG = 'Port number is reserved and cannot be used.'
 
 DH_PARAM_BITS_INVALID = 'dh_param_bits_invalid'
 DH_PARAM_BITS_INVALID_MSG = 'DH param bits are not valid, must ' + \
@@ -678,9 +636,6 @@ MONGODB_CONNECT_ERROR_MSG = 'Unable to connect to MongoDB server.'
 MONGODB_AUTH_ERROR = 'mongodb_auth_error'
 MONGODB_AUTH_ERROR_MSG = 'Unable to authenticate to the MongoDB server.'
 
-SETUP_KEY_INVALID = 'setup_key_invalid'
-SETUP_KEY_INVALID_MSG = 'Setup key is invalid.'
-
 DUO_USER_INVALID = 'duo_user_invalid'
 DUO_USER_INVALID_MSG = 'Username is invalid.'
 
@@ -781,7 +736,7 @@ persist-tun
 auth %s
 status-version 2
 script-security 2
-reneg-sec 2592000
+reneg-sec 3600
 hash-size 1024 1024
 max-routes-per-client 512
 verb %s

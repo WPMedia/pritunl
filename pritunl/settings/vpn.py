@@ -11,8 +11,6 @@ class SettingsVpn(SettingsGroupMongo):
         'log_lines': 5000,
         'server_ping': 10,
         'server_ping_ttl': 30,
-        'route_ping': 10,
-        'route_ping_ttl': 30,
         'status_update_rate': 3,
         'http_request_timeout': 10,
         'op_timeout': 10,

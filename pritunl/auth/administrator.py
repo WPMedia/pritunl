@@ -115,10 +115,8 @@ class Administrator(mongo.MongoObject):
             hash_func = hash_password_v1
         elif hash_ver == '2':
             hash_func = hash_password_v2
-        elif hash_ver == '3':
-            hash_func = hash_password_v3
         else:
-            raise ValueError('Unknown hash version')
+            raise AttributeError('Unknown hash version')
 
         test_hash = base64.b64encode(hash_func(pass_salt, test_pass))
         return pass_hash == test_hash
@@ -149,22 +147,22 @@ class Administrator(mongo.MongoObject):
             )
             return False
 
-        # sso_admin = settings.app.sso_admin
-        # if settings.app.sso and DUO_AUTH in settings.app.sso and sso_admin:
-        #     allow, _ = sso.auth_duo(
-        #         sso_admin,
-        #         strong=True,
-        #         ipaddr=remote_addr,
-        #         type='Administrator'
-        #     )
-        #     if not allow:
-        #         self.audit_event(
-        #             'admin_auth',
-        #             'Administrator login failed, ' +
-        #                 'failed secondary authentication',
-        #             remote_addr=remote_addr,
-        #         )
-        #         return False
+        sso_admin = settings.app.sso_admin
+        if settings.app.sso and DUO_AUTH in settings.app.sso and sso_admin:
+            allow, _ = sso.auth_duo(
+                sso_admin,
+                strong=True,
+                ipaddr=remote_addr,
+                type='Administrator'
+            )
+            if not allow:
+                self.audit_event(
+                    'admin_auth',
+                    'Administrator login failed, ' +
+                        'failed secondary authentication',
+                    remote_addr=remote_addr,
+                )
+                return False
 
         self.audit_event(
             'admin_auth',
@@ -239,8 +237,8 @@ class Administrator(mongo.MongoObject):
 
             salt = base64.b64encode(os.urandom(8))
             pass_hash = base64.b64encode(
-                hash_password_v3(salt, self.password))
-            pass_hash = '3$%s$%s' % (salt, pass_hash)
+                hash_password_v2(salt, self.password))
+            pass_hash = '2$%s$%s' % (salt, pass_hash)
             self.password = pass_hash
 
             if self.default and self.exists:
@@ -433,6 +431,13 @@ def reset_password():
         password=DEFAULT_PASSWORD,
         default=True,
     ).commit()
+
+    settings_collection = mongo.get_collection('settings')
+    settings_collection.update({
+        '_id': 'app',
+    }, {'$set': {
+        'sso_admin': None,
+    }})
 
     return DEFAULT_USERNAME, DEFAULT_PASSWORD
 

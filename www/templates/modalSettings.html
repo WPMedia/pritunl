@@ -2,7 +2,7 @@
   <div class="settings-left layout-flex left">
     <div class="username form-group">
       <label>Username</label>
-      <input type="text" class="form-control" placeholder="Enter username" value="<%- username %>" spellcheck="false" autofocus>
+      <input type="text" class="form-control" placeholder="Enter username" value="<%- username %>" autofocus>
     </div>
     <div class="auditing form-group">
       <label>Auditing Mode</label>
@@ -30,10 +30,6 @@
         <option value="dark" <%= theme === 'dark' ? 'selected' : '' %>>Dark</option>
       </select>
     </div>
-    <div class="server-port form-group">
-      <label>Web Console Port</label>
-      <input type="text" class="form-control" placeholder="Enter web console port" value="<%- server_port %>">
-    </div>
     <div class="sso-mode form-group">
       <label>Single Sign-On</label>
       <select class="form-control" data-toggle="tooltip" title="Single Sign-On Mode">
@@ -42,8 +38,6 @@
         <option value="saml_okta_duo" <%= sso === 'saml_okta_duo' ? 'selected' : '' %>>Okta + Duo Security</option>
         <option value="saml_onelogin" <%= sso === 'saml_onelogin' ? 'selected' : '' %>>OneLogin</option>
         <option value="saml_onelogin_duo" <%= sso === 'saml_onelogin_duo' ? 'selected' : '' %>>OneLogin + Duo Security</option>
-        <option value="slack" <%= sso === 'slack' ? 'selected' : '' %>>Slack</option>
-        <option value="slack_duo" <%= sso === 'slack_duo' ? 'selected' : '' %>>Slack + Duo Security</option>
         <option value="google" <%= sso === 'google' ? 'selected' : '' %>>Google Apps</option>
         <option value="google_duo" <%= sso === 'google_duo' ? 'selected' : '' %>>Google Apps + Duo Security</option>
         <option value="saml" <%= sso === 'saml' ? 'selected' : '' %>>SAML</option>
@@ -64,9 +58,13 @@
       <label>SAML Certificate</label><br>
       <textarea class="form-control" rows="4" spellcheck="false" data-toggle="tooltip" title="The SAML X.509 Certificate" placeholder="Enter saml certificate"><%- sso_saml_cert %></textarea>
     </div>
-    <div class="sso-token form-group" <%= sso === 'duo' || sso === 'saml_duo' || sso === 'saml_onelogin_duo' || sso === 'saml_okta_duo' || sso === 'slack_duo' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
+    <div class="sso-token form-group" <%= sso === 'duo' || sso === 'saml_duo' || sso === 'saml_onelogin_duo' || sso === 'saml_okta_duo' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
       <label>Duo Integration Key</label>
       <input type="text" class="form-control" placeholder="Enter integration key" value="<%- sso_token || '' %>">
+    </div>
+    <div class="sso-admin form-group" <%= sso === 'duo' || sso === 'saml_duo' || sso === 'saml_onelogin_duo' || sso === 'saml_okta_duo' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
+      <label>Duo Admin Username</label>
+      <input type="text" class="form-control" placeholder="Enter admin username" value="<%- sso_admin || '' %>" data-toggle="tooltip" title="Require a Duo push request from this username when logging into the web console as the admin">
     </div>
   </div>
   <div class="settings-right right">
@@ -103,10 +101,6 @@
         <option value="dark" <%= theme === 'dark' ? 'selected' : '' %>>Dark</option>
       </select>
     </div>
-    <div class="acme-domain form-group">
-      <label>LetsEncrypt Domain</label>
-      <input type="text" class="form-control" spellcheck="false" placeholder="Enter web console domain" value="<%- acme_domain %>" data-toggle="tooltip" title="Enter the domain name that is registered to this server to automatically configure a signed SSL certificate from LetsEncrypt. Port 80 must be publicly accessible on the server to verify the domain.">
-    </div>
     <div class="cloud-provider form-group">
       <label>Cloud Provider</label>
       <select class="form-control" data-toggle="tooltip" title="Cloud provider for integration">
@@ -130,13 +124,9 @@
       <label>OneLogin API Key</label>
       <input type="text" class="form-control" placeholder="Enter OneLogin API key" value="<%- sso_onelogin_key || '' %>" data-toggle="tooltip" title="OneLogin API key">
     </div>
-    <div class="sso-match-google form-group" <%= sso === 'google' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
+    <div class="sso-match form-group" <%= sso === 'google' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
       <label>Google Apps Domain</label>
-      <input type="text" class="form-control" spellcheck="false" placeholder="Enter Google Apps domain" value="<%- sso_match || '' %>" data-toggle="tooltip" title="Google apps domain to match against users email address. Multiple domains can be entrered sperated by a comma. (example: pritunl.com)">
-    </div>
-    <div class="sso-match-slack form-group" <%= sso === 'slack' || sso === 'slack_duo' ? '' : 'style="display: none;"' %>>
-      <label>Slack Team</label>
-      <input type="text" class="form-control" spellcheck="false" placeholder="Enter slack team" value="<%- sso_match || '' %>" data-toggle="tooltip" title="Slack team domain to match against users team. (example: pritunl.slack.com)">
+      <input type="email" class="form-control" placeholder="Enter Google Apps domain" value="<%- sso_match || '' %>" data-toggle="tooltip" title="Google apps domain to match against users email address. Multiple domains can be entrered sperated by a comma. (example: pritunl.com)">
     </div>
     <div class="sso-radius-host form-group" <%= sso === 'radius' ? '' : 'style="display: none;"' %>>
       <label>Radius Host</label>
@@ -146,11 +136,11 @@
       <label>Radius Secret</label>
       <input type="password" class="form-control" placeholder="Enter Radius secret" value="<%- sso_secret || '' %>" data-toggle="tooltip" title="Radius shared secret">
     </div>
-    <div class="sso-host form-group" <%= sso === 'duo' || sso === 'saml_duo' || sso === 'saml_onelogin_duo' || sso === 'saml_okta_duo' || sso === 'slack_duo' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
+    <div class="sso-host form-group" <%= sso === 'duo' || sso === 'saml_duo' || sso === 'saml_onelogin_duo' || sso === 'saml_okta_duo' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
       <label>Duo API Hostname</label>
       <input type="text" class="form-control" placeholder="Enter api hostname" value="<%- sso_host || '' %>">
     </div>
-    <div class="sso-secret form-group" <%= sso === 'duo' || sso === 'saml_duo' || sso === 'saml_onelogin_duo' || sso === 'saml_okta_duo' || sso === 'slack_duo' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
+    <div class="sso-secret form-group" <%= sso === 'duo' || sso === 'saml_duo' || sso === 'saml_onelogin_duo' || sso === 'saml_okta_duo' || sso === 'google_duo' ? '' : 'style="display: none;"' %>>
       <label>Duo Secret Key</label>
       <input type="text" class="form-control" placeholder="Enter secret key" value="<%- sso_secret || '' %>">
     </div>
@@ -253,7 +243,7 @@
       <input type="text" class="form-control" placeholder="Enter SMTP username" value="<%- email_username || '' %>">
     </div>
     <div class="server-cert form-group">
-      <label>Server SSL Certificate</label><br>
+      <label>Enter Server SSL Certificate</label><br>
       <textarea class="form-control" rows="4" spellcheck="false"><%- server_cert %></textarea>
     </div>
   </div>
@@ -267,7 +257,7 @@
       <input type="password" class="form-control" placeholder="Enter SMTP password" value="<%- email_password ? '********************' : '' %>">
     </div>
     <div class="server-key form-group">
-      <label>Server SSL Key</label><br>
+      <label>Enter Server SSL Key</label><br>
       <textarea class="form-control" rows="4" spellcheck="false"><%- server_key %></textarea>
     </div>
   </div>

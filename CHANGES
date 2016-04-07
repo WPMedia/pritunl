@@ -1,52 +1,8 @@
 Pritunl Changelog
 =================
 
-Version 1.21.928.27 2016-03-28
-------------------------------
+<%= version %>
 
-Fix issue with task
-
-Version 1.21.926.53 2016-03-26
-------------------------------
-
-Fix issue with VPC route advertisement
-
-Version 1.21.924.38 2016-03-24
-------------------------------
-
-Add single sign-on with Slack
-
-Version 1.20.923.9 2016-03-23
------------------------------
-
-Fix issue with creating users
-
-Version 1.20.922.99 2016-03-22
-------------------------------
-
-Improve security in initial setup process
-Improve database setup and upgrade process
-Fix issue with database upgrades
-
-Version 1.20.917.37 2016-03-17
-------------------------------
-
-Add aws vpc integration
-Remove Duo SSO administrator user
-Fix setup server port on database upgrades
-
-Version 1.19.913.28 2016-03-13
-------------------------------
-
-Fix issue with debug server
-
-Version 1.19.912.44 2016-03-12
-------------------------------
-
-Add support for LetsEncrypt
-Redirect http to https on web console
-Move server port option to settings in web console
-Change default web console port to 443
 Fix issue with finding network interface for route
 Fix issue with profile sync
 

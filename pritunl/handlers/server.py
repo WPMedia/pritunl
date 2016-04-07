@@ -162,13 +162,6 @@ def server_put_post(server_id=None):
         network_end_def = True
         network_end = flask.request.json['network_end']
 
-    restrict_routes = None
-    restrict_routes_def = False
-    if 'restrict_routes' in flask.request.json:
-        restrict_routes_def = True
-        restrict_routes = True if flask.request.json['restrict_routes'] \
-            else False
-
     ipv6 = None
     ipv6_def = False
     if 'ipv6' in flask.request.json:
@@ -457,7 +450,6 @@ def server_put_post(server_id=None):
             network_mode=network_mode,
             network_start=network_start,
             network_end=network_end,
-            restrict_routes=restrict_routes,
             ipv6=ipv6,
             ipv6_firewall=ipv6_firewall,
             bind_address=bind_address,
@@ -507,8 +499,6 @@ def server_put_post(server_id=None):
             svr.network_start = network_start
         if network_end_def:
             svr.network_end = network_end
-        if restrict_routes_def:
-            svr.restrict_routes = restrict_routes
         if ipv6_def:
             svr.ipv6 = ipv6
         if ipv6_firewall_def:
@@ -684,18 +674,13 @@ def server_route_get(server_id):
 @app.app.route('/server/<server_id>/route', methods=['POST'])
 @auth.session_auth
 def server_route_post(server_id):
-    if settings.app.demo_mode:
-        return utils.demo_blocked()
-
     svr = server.get_by_id(server_id, fields=('_id', 'network', 'links',
         'network_start', 'network_end', 'routes', 'organizations', 'status'))
     route_network = flask.request.json['network']
     nat_route = True if flask.request.json.get('nat') else False
-    vpc_region = utils.filter_str(flask.request.json.get('vpc_region')) or None
-    vpc_id = utils.filter_str(flask.request.json.get('vpc_id')) or None
 
     try:
-        route = svr.upsert_route(route_network, nat_route, vpc_region, vpc_id)
+        route = svr.add_route(route_network, nat_route)
     except ServerOnlineError:
         return utils.jsonify({
             'error': SERVER_ROUTE_ONLINE,
@@ -729,18 +714,13 @@ def server_route_post(server_id):
 @app.app.route('/server/<server_id>/route/<route_network>', methods=['PUT'])
 @auth.session_auth
 def server_route_put(server_id, route_network):
-    if settings.app.demo_mode:
-        return utils.demo_blocked()
-
     svr = server.get_by_id(server_id, fields=('_id', 'network', 'links',
         'network_start', 'network_end', 'routes', 'organizations', 'status'))
     route_network = route_network.decode('hex')
     nat_route = True if flask.request.json.get('nat') else False
-    vpc_region = utils.filter_str(flask.request.json.get('vpc_region')) or None
-    vpc_id = utils.filter_str(flask.request.json.get('vpc_id')) or None
 
     try:
-        route = svr.upsert_route(route_network, nat_route, vpc_region, vpc_id)
+        route = svr.add_route(route_network, nat_route)
     except ServerOnlineError:
         return utils.jsonify({
             'error': SERVER_ROUTE_ONLINE,
@@ -773,9 +753,6 @@ def server_route_put(server_id, route_network):
 @app.app.route('/server/<server_id>/route/<route_network>', methods=['DELETE'])
 @auth.session_auth
 def server_route_delete(server_id, route_network):
-    if settings.app.demo_mode:
-        return utils.demo_blocked()
-
     svr = server.get_by_id(server_id, fields=('_id', 'network', 'links',
         'network_start', 'network_end', 'routes', 'organizations', 'status'))
     route_network = route_network.decode('hex')

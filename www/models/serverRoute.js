@@ -12,9 +12,7 @@ define([
       'virtual_network': null,
       'network_link': null,
       'server_link': null,
-      'nat': null,
-      'vpc_region': null,
-      'vpc_id': null
+      'nat': null
     },
     url: function() {
       var url = '/server/' + this.get('server') + '/route';

@@ -24,7 +24,8 @@ upgrade_done = threading.Event()
 setup_ready = threading.Event()
 db_ready = threading.Event()
 server_ready = threading.Event()
-setup_state = None
+db_setup = None
+server_upgrade = None
 
 def stop_server():
     def stop():
@@ -41,33 +42,13 @@ except ImportError:
     from pritunl.wsgiserver import ssl_builtin
     SSLAdapter = ssl_builtin.BuiltinSSLAdapter
 
-@app.before_request
-def before_request():
-    flask.g.query_count = 0
-    flask.g.write_count = 0
-    flask.g.query_time = 0
-    flask.g.start = time.time()
-
-@app.after_request
-def after_request(response):
-    response.headers.add('Execution-Time',
-        int((time.time() - flask.g.start) * 1000))
-    response.headers.add('Query-Time',
-        int(flask.g.query_time * 1000))
-    response.headers.add('Query-Count', flask.g.query_count)
-    response.headers.add('Write-Count', flask.g.write_count)
-    return response
-
 @app.route('/', methods=['GET'])
 def index_get():
-    if setup_state == 'upgrade':
-        return flask.redirect('upgrade')
-    else:
-        return flask.redirect('setup')
+    return flask.redirect('setup')
 
 @app.route('/setup', methods=['GET'])
 def setup_get():
-    if setup_state == 'upgrade':
+    if not db_setup:
         return flask.redirect('upgrade')
 
     try:
@@ -80,7 +61,7 @@ def setup_get():
 
 @app.route('/upgrade', methods=['GET'])
 def upgrade_get():
-    if setup_state != 'upgrade':
+    if db_setup:
         return flask.redirect('setup')
 
     try:
@@ -110,20 +91,7 @@ def static_get(file_name):
 
 @app.route('/setup/mongodb', methods=['PUT'])
 def setup_mongodb_put():
-    global setup_state
-
-    setup_key = flask.request.json['setup_key']
     mongodb_uri = flask.request.json['mongodb_uri']
-
-    if setup_state != 'setup':
-        return flask.abort(404)
-
-    utils.rand_sleep()
-    if setup_key != settings.local.setup_key:
-        return utils.jsonify({
-            'error': SETUP_KEY_INVALID,
-            'error_msg': SETUP_KEY_INVALID_MSG,
-        }, 400)
 
     if not mongodb_uri:
         return utils.jsonify({
@@ -151,12 +119,10 @@ def setup_mongodb_put():
     settings.conf.mongodb_uri = mongodb_uri
     settings.conf.commit()
 
-    db_ver_int = utils.get_db_ver_int()
-    if check_db_ver(db_ver_int):
-        setup_state = 'upgrade'
-        upgrade_database()
-    else:
+    if server_ready:
         stop_server()
+    else:
+        upgrade_database()
 
     return ''
 
@@ -168,15 +134,13 @@ def setup_upgrade_get():
     return ''
 
 def server_thread():
-    global server
-
     app.logger.setLevel(logging.DEBUG)
     app.logger.addFilter(logger.log_filter)
     app.logger.addHandler(logger.log_handler)
 
-    server_port = upgrade.get_server_port()
+    global server
     server = wsgiserver.CherryPyWSGIServer(
-        (settings.conf.bind_addr, server_port), app,
+        (settings.conf.bind_addr, settings.conf.port), app,
         server_name=wsgiserver.CherryPyWSGIServer.version,
         timeout=1,
         shutdown_timeout=0.5,
@@ -189,6 +153,7 @@ def server_thread():
 
     if settings.conf.ssl:
         upgrade.setup_cert(
+            bool(settings.conf.mongodb_uri),
             server_cert_path,
             server_key_path,
         )
@@ -203,7 +168,8 @@ def server_thread():
     settings.local.server_start.set()
 
 def upgrade_database():
-    upgrade.database_setup()
+    global db_setup
+    db_setup = False
 
     def _upgrade_thread():
         try:
@@ -220,20 +186,7 @@ def on_system_msg(msg):
         logger.warning('Received shut down event', 'setup')
         set_global_interrupt()
 
-def check_db_ver(db_ver_int):
-    if db_ver_int > settings.local.version_int:
-        logger.error('Database version is newer than server version',
-            'setup',
-            db_version=db_ver_int,
-            server_version=settings.local.version_int,
-        )
-        exit(75)
-
-    return db_ver_int and db_ver_int < settings.local.version_int
-
 def setup_server():
-    global setup_state
-
     last_error = time.time() - 24
     while True:
         try:
@@ -255,15 +208,17 @@ def setup_server():
         )
         exit(75)
 
-    if not settings.conf.mongodb_uri:
-        setup_state = 'setup'
-    elif check_db_ver(db_ver_int):
-        setup_state = 'upgrade'
+    global db_setup
+    db_setup = not settings.conf.mongodb_uri
 
-    if setup_state:
+    global server_upgrade
+    server_upgrade = db_ver_int and db_ver_int < settings.local.version_int
+
+    if db_setup or server_upgrade:
         logger.info('Starting setup server', 'setup')
 
-        if setup_state == 'upgrade':
+        if not db_setup:
+            upgrade.database_setup()
             upgrade_database()
 
         settings.local.server_start.clear()

@@ -568,9 +568,9 @@ def sso_authenticate_post():
 def sso_request_get():
     sso_mode = settings.app.sso
 
-    if sso_mode not in (GOOGLE_AUTH, GOOGLE_DUO_AUTH, SLACK_AUTH,
-            SLACK_DUO_AUTH, SAML_AUTH, SAML_DUO_AUTH, SAML_OKTA_AUTH,
-            SAML_OKTA_DUO_AUTH, SAML_ONELOGIN_AUTH, SAML_ONELOGIN_DUO_AUTH):
+    if sso_mode not in (GOOGLE_AUTH, GOOGLE_DUO_AUTH,
+            SAML_AUTH, SAML_DUO_AUTH, SAML_OKTA_AUTH, SAML_OKTA_DUO_AUTH,
+            SAML_ONELOGIN_AUTH, SAML_ONELOGIN_DUO_AUTH):
         return flask.abort(405)
 
     state = utils.rand_str(64)
@@ -609,42 +609,6 @@ def sso_request_get():
         tokens_collection.insert({
             '_id': state,
             'type': GOOGLE_AUTH,
-            'secret': secret,
-            'timestamp': utils.now(),
-        })
-
-        data = resp.json()
-
-        return flask.redirect(data['url'])
-
-    elif SLACK_AUTH in sso_mode:
-        resp = utils.request.post(AUTH_SERVER + '/v1/request/slack',
-            headers={
-                'Content-Type': 'application/json',
-            },
-            json_data={
-                'license': settings.app.license,
-                'callback': callback,
-                'state': state,
-                'secret': secret,
-            }
-        )
-
-        if resp.status_code != 200:
-            logger.error('Slack auth server error', 'sso',
-                status_code=resp.status_code,
-                content=resp.content,
-            )
-
-            if resp.status_code == 401:
-                return flask.abort(405)
-
-            return flask.abort(500)
-
-        tokens_collection = mongo.get_collection('sso_tokens')
-        tokens_collection.insert({
-            '_id': state,
-            'type': SLACK_AUTH,
             'secret': secret,
             'timestamp': utils.now(),
         })
@@ -698,9 +662,9 @@ def sso_request_get():
 def sso_callback_get():
     sso_mode = settings.app.sso
 
-    if sso_mode not in (GOOGLE_AUTH, GOOGLE_DUO_AUTH, SLACK_AUTH,
-            SLACK_DUO_AUTH, SAML_AUTH, SAML_DUO_AUTH, SAML_OKTA_AUTH,
-            SAML_OKTA_DUO_AUTH, SAML_ONELOGIN_AUTH, SAML_ONELOGIN_DUO_AUTH):
+    if sso_mode not in (GOOGLE_AUTH, GOOGLE_DUO_AUTH,
+            SAML_AUTH, SAML_DUO_AUTH, SAML_OKTA_AUTH, SAML_OKTA_DUO_AUTH,
+            SAML_ONELOGIN_AUTH, SAML_ONELOGIN_DUO_AUTH):
         return flask.abort(405)
 
     state = flask.request.args.get('state')
@@ -740,39 +704,18 @@ def sso_callback_get():
             org = organization.get_by_name(org_name, fields=('_id'))
             if org:
                 org_id = org.id
-    elif doc.get('type') == SLACK_AUTH:
-        username = params.get('username')[0]
-        email = None
-        user_team = params.get('team')[0]
-        org_names = params.get('orgs', [''])[0]
-        org_names = org_names.split(',')
 
-        valid, org_name = sso.verify_slack(username, user_team, org_names)
-        if not valid:
-            return flask.abort(401)
-
-        if org_name:
-            org_names = [org_name]
-
-        org_id = settings.app.sso_org
-        for org_name in org_names:
-            org = organization.get_by_name(org_name, fields=('_id'))
-            if org:
-                org_id = org.id
-                break
     else:
-        username = params.get('username')[0]
+        username = params.get('username', [None])[0]
         email = username
 
-        valid, org_name = sso.verify_google(username)
+        valid, org_id = sso.verify_google(username)
         if not valid:
             return flask.abort(401)
 
-        org_id = settings.app.sso_org
-        if org_name:
-            org = organization.get_by_name(org_name, fields=('_id'))
-            if org:
-                org_id = org.id
+        if not org_id:
+            org_id = settings.app.sso_org
+
     if DUO_AUTH in sso_mode:
         valid, _ = sso.auth_duo(
             username,

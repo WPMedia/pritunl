@@ -34,9 +34,6 @@ _wsgi_limiter = Limiter('app', 'peer_limit', 'peer_limit_timeout')
 
 class CherryPyWSGIServerLimited(wsgiserver.CherryPyWSGIServer):
     def error_log(self, msg='', level=None, traceback=False):
-        if not settings.app.log_web_errors:
-            return
-
         if traceback:
             logger.exception(msg, 'app')
         else:

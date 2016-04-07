@@ -41,7 +41,6 @@ dict_fields = [
     'network_mode',
     'network_start',
     'network_end',
-    'restrict_routes',
     'bind_address',
     'port',
     'protocol',
@@ -87,7 +86,6 @@ class Server(mongo.MongoObject):
         'network_mode',
         'network_start',
         'network_end',
-        'restrict_routes',
         'multi_device',
         'routes',
         'dns_servers',
@@ -135,7 +133,6 @@ class Server(mongo.MongoObject):
         'otp_auth': False,
         'tls_auth': True,
         'lzo_compression': False,
-        'restrict_routes': True,
         'inter_client': True,
         'ping_interval': 10,
         'ping_timeout': 60,
@@ -157,14 +154,14 @@ class Server(mongo.MongoObject):
     cache_prefix = 'server'
 
     def __init__(self, name=None, network=None, network_mode=None,
-            network_start=None, network_end=None, restrict_routes=None,
-            ipv6=None, ipv6_firewall=None,bind_address=None, port=None,
-            protocol=None, dh_param_bits=None, multi_device=None,
-            dns_servers=None, search_domain=None, otp_auth=None,
-            cipher=None, hash=None, jumbo_frames=None, lzo_compression=None,
-            inter_client=None, ping_interval=None, ping_timeout=None,
-            link_ping_interval=None, link_ping_timeout=None, max_clients=None,
-            replica_count=None, dns_mapping=None, debug=None, **kwargs):
+            network_start=None, network_end=None, ipv6=None,
+            ipv6_firewall=None,bind_address=None, port=None, protocol=None,
+            dh_param_bits=None, multi_device=None, dns_servers=None,
+            search_domain=None, otp_auth=None, cipher=None, hash=None,
+            jumbo_frames=None, lzo_compression=None, inter_client=None,
+            ping_interval=None, ping_timeout=None, link_ping_interval=None,
+            link_ping_timeout=None, max_clients=None, replica_count=None,
+            dns_mapping=None, debug=None, **kwargs):
         mongo.MongoObject.__init__(self, **kwargs)
 
         if 'network' in self.loaded_fields:
@@ -185,8 +182,6 @@ class Server(mongo.MongoObject):
             self.network_start = network_start
         if network_end is not None:
             self.network_end = network_end
-        if restrict_routes is not None:
-            self.restrict_routes = restrict_routes
         if ipv6 is not None:
             self.ipv6 = ipv6
         if ipv6_firewall is not None:
@@ -277,7 +272,6 @@ class Server(mongo.MongoObject):
             'network_mode': self.network_mode,
             'network_start': self.network_start,
             'network_end': self.network_end,
-            'restrict_routes': self.restrict_routes,
             'multi_device': self.multi_device,
             'dns_servers': self.dns_servers,
             'search_domain': self.search_domain,
@@ -435,8 +429,6 @@ class Server(mongo.MongoObject):
         routes = []
         link_routes = []
         routes_dict = {}
-        virtual_vpc_region = None
-        virtual_vpc_id = None
 
         for network_link in self.network_links:
             route_id = network_link.encode('hex')
@@ -445,8 +437,6 @@ class Server(mongo.MongoObject):
                 'server': self.id,
                 'network': network_link,
                 'nat': False,
-                'vpc_region': None,
-                'vpc_id': None,
                 'virtual_network': False,
                 'network_link': True,
                 'server_link': False,
@@ -466,15 +456,14 @@ class Server(mongo.MongoObject):
                     data['server'] = self.id
                     data['network'] = route['network']
                     data['nat'] = route['nat']
-                    data['vpc_region'] = None
-                    data['vpc_id'] = None
                     data['virtual_network'] = False
                     data['network_link'] = False
                     data['server_link'] = True
 
                     if route['virtual_network']:
                         link_routes.append(data)
-                    routes_dict[route['network']] = data
+                    else:
+                        routes_dict[route['network']] = data
 
         for route in self.routes:
             route_network = route['network']
@@ -489,8 +478,6 @@ class Server(mongo.MongoObject):
                     'server': self.id,
                     'network': route_network,
                     'nat': route.get('nat', True),
-                    'vpc_region': route.get('vpc_region', None),
-                    'vpc_id': route.get('vpc_id', None),
                     'virtual_network': False,
                     'network_link': False,
                     'server_link': False,
@@ -502,22 +489,15 @@ class Server(mongo.MongoObject):
                         'server': self.id,
                         'network': '::/0',
                         'nat': route.get('nat', True),
-                        'vpc_region': route.get('vpc_region', None),
-                        'vpc_id': route.get('vpc_id', None),
                         'virtual_network': False,
                         'network_link': False,
                         'server_link': False,
                     })
             elif route_network == 'virtual':
-                virtual_vpc_region = route.get('vpc_region', None)
-                virtual_vpc_id = route.get('vpc_id', None)
+                continue
             else:
                 if route_network in routes_dict:
                     routes_dict[route_network]['nat'] = route.get('nat', True)
-                    routes_dict[route_network]['vpc_region'] = route.get(
-                        'vpc_region', None)
-                    routes_dict[route_network]['vpc_id'] = route.get(
-                        'vpc_id', None)
                 else:
                     if route.get('server_link') and \
                             route_network not in routes_dict:
@@ -528,8 +508,6 @@ class Server(mongo.MongoObject):
                         'server': self.id,
                         'network': route_network,
                         'nat': route.get('nat', True),
-                        'vpc_region': route.get('vpc_region', None),
-                        'vpc_id': route.get('vpc_id', None),
                         'virtual_network': False,
                         'network_link': False,
                         'server_link': False,
@@ -540,8 +518,6 @@ class Server(mongo.MongoObject):
             'server': self.id,
             'network': self.network,
             'nat': False,
-            'vpc_region': virtual_vpc_region,
-            'vpc_id': virtual_vpc_id,
             'virtual_network': True,
             'network_link': False,
             'server_link': False,
@@ -550,12 +526,12 @@ class Server(mongo.MongoObject):
         for route_network in sorted(routes_dict.keys()):
             if not routes_dict[route_network]['server_link']:
                 routes.append(routes_dict[route_network])
-            elif not routes_dict[route_network]['virtual_network']:
+            else:
                 link_routes.append(routes_dict[route_network])
 
         return routes + link_routes
 
-    def upsert_route(self, network, nat_route, vpc_region, vpc_id):
+    def add_route(self, network, nat_route):
         exists = False
 
         if self.status == ONLINE:
@@ -587,8 +563,6 @@ class Server(mongo.MongoObject):
         for route in self.routes:
             if route['network'] == network:
                 route['nat'] = nat_route
-                route['vpc_region'] = vpc_region
-                route['vpc_id'] = vpc_id
                 route['server_link'] = server_link
                 exists = True
                 break
@@ -597,8 +571,6 @@ class Server(mongo.MongoObject):
             self.routes.append({
                 'network': network,
                 'nat': nat_route,
-                'vpc_region': vpc_region,
-                'vpc_id': vpc_id,
                 'server_link': server_link,
             })
 
@@ -607,8 +579,6 @@ class Server(mongo.MongoObject):
             'server': self.id,
             'network': orig_network,
             'nat': nat_route,
-            'vpc_region': vpc_region,
-            'vpc_id': vpc_id,
         }
 
     def remove_route(self, network):

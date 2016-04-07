@@ -178,23 +178,12 @@ class ServerInstanceCom(object):
         )
 
     def on_msg(self, evt):
-        msg = evt['message']
-        event_type = msg[0]
+        event_type, user_id = evt['message']
 
-        if event_type == 'user_disconnect':
-            user_id = msg[1]
-            self.clients.disconnect_user(user_id)
-        elif event_type == 'route_advertisement':
-            server_id = msg[1]
-            vpc_region = msg[2]
-            vpc_id = msg[3]
-            network = msg[4]
+        if event_type != 'user_disconnect':
+            return
 
-            if server_id != self.server.id:
-                return
-
-            self.instance.reserve_route_advertisement(
-                vpc_region, vpc_id, network)
+        self.clients.disconnect_user(user_id)
 
     @interrupter
     def _watch_thread(self):

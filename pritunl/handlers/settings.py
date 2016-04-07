@@ -2,13 +2,11 @@ from pritunl.constants import *
 from pritunl import settings
 from pritunl import utils
 from pritunl import app
-from pritunl import acme
 from pritunl import auth
 from pritunl import event
 from pritunl import ipaddress
 from pritunl import server
 from pritunl import organization
-from pritunl import logger
 
 import flask
 
@@ -23,7 +21,6 @@ _changes_audit_text = {
 def _dict():
     if settings.app.demo_mode:
         return {
-            'acme_domain': settings.app.acme_domain,
             'theme': settings.app.theme,
             'auditing': settings.app.auditing,
             'monitoring': settings.app.monitoring,
@@ -38,6 +35,7 @@ def _dict():
             'sso_token': 'demo',
             'sso_secret': 'demo',
             'sso_host': 'demo',
+            'sso_admin': 'demo',
             'sso_org': settings.app.sso_org,
             'sso_saml_url': 'demo',
             'sso_saml_issuer_url': 'demo',
@@ -47,7 +45,6 @@ def _dict():
             'public_address': settings.local.host.public_addr,
             'public_address6': settings.local.host.public_addr6,
             'routed_subnet6': settings.local.host.routed_subnet6,
-            'server_port': settings.app.server_port,
             'server_cert': 'demo',
             'server_key': 'demo',
             'cloud_provider': settings.app.cloud_provider,
@@ -74,7 +71,6 @@ def _dict():
         }
     else:
         return {
-            'acme_domain': settings.app.acme_domain,
             'theme': settings.app.theme,
             'auditing': settings.app.auditing,
             'monitoring': settings.app.monitoring,
@@ -89,6 +85,7 @@ def _dict():
             'sso_token': settings.app.sso_token,
             'sso_secret': settings.app.sso_secret,
             'sso_host': settings.app.sso_host,
+            'sso_admin': settings.app.sso_admin,
             'sso_org': settings.app.sso_org,
             'sso_saml_url': settings.app.sso_saml_url,
             'sso_saml_issuer_url': settings.app.sso_saml_issuer_url,
@@ -98,7 +95,6 @@ def _dict():
             'public_address': settings.local.host.public_addr,
             'public_address6': settings.local.host.public_addr6,
             'routed_subnet6': settings.local.host.routed_subnet6,
-            'server_port': settings.app.server_port,
             'server_cert': settings.app.server_cert,
             'server_key': settings.app.server_key,
             'cloud_provider': settings.app.cloud_provider,
@@ -149,10 +145,6 @@ def settings_put():
     admin = flask.g.administrator
     changes = set()
 
-    settings_commit = False
-    update_server = False
-    update_acme = False
-
     if 'username' in flask.request.json and flask.request.json['username']:
         username = utils.filter_str(
             flask.request.json['username']).lower()
@@ -173,82 +165,7 @@ def settings_put():
         admin.generate_secret()
         changes.add('token')
 
-    if 'server_cert' in flask.request.json:
-        settings_commit = True
-        server_cert = flask.request.json['server_cert']
-        if server_cert:
-            server_cert = server_cert.strip()
-        else:
-            server_cert = None
-
-        if server_cert != settings.app.server_cert:
-            update_server = True
-
-        settings.app.server_cert = server_cert
-
-    if 'server_key' in flask.request.json:
-        settings_commit = True
-        server_key = flask.request.json['server_key']
-        if server_key:
-            server_key = server_key.strip()
-        else:
-            server_key = None
-
-        if server_key != settings.app.server_key:
-            update_server = True
-
-        settings.app.server_key = server_key
-
-    if 'server_port' in flask.request.json:
-        settings_commit = True
-
-        server_port = flask.request.json['server_port']
-        if not server_port:
-            server_port = 443
-
-        try:
-            server_port = int(server_port)
-            if server_port < 1 or server_port > 65535:
-                raise ValueError('Port invalid')
-        except ValueError:
-            return utils.jsonify({
-                'error': PORT_INVALID,
-                'error_msg': PORT_INVALID_MSG,
-            }, 400)
-
-        if settings.app.redirect_server and server_port == 80:
-            return utils.jsonify({
-                'error': PORT_RESERVED,
-                'error_msg': PORT_RESERVED_MSG,
-            }, 400)
-
-        if server_port != settings.app.server_port:
-            update_server = True
-
-        settings.app.server_port = server_port
-
-    if 'acme_domain' in flask.request.json:
-        settings_commit = True
-
-        acme_domain = utils.filter_str(
-            flask.request.json['acme_domain'] or None)
-        if acme_domain:
-            acme_domain = acme_domain.replace('https://', '')
-            acme_domain = acme_domain.replace('http://', '')
-            acme_domain = acme_domain.replace('/', '')
-
-        if acme_domain != settings.app.acme_domain:
-            if not acme_domain:
-                settings.app.acme_key = None
-                settings.app.acme_timestamp = None
-                settings.app.server_key = None
-                settings.app.server_cert = None
-                utils.create_server_cert()
-                update_server = True
-            else:
-                update_acme = True
-        settings.app.acme_domain = acme_domain
-
+    settings_commit = False
     if 'auditing' in flask.request.json:
         settings_commit = True
         auditing = flask.request.json['auditing'] or None
@@ -348,6 +265,13 @@ def settings_put():
         if sso_host != settings.app.sso_host:
             changes.add('sso')
         settings.app.sso_host = sso_host
+
+    if 'sso_admin' in flask.request.json:
+        settings_commit = True
+        sso_admin = flask.request.json['sso_admin'] or None
+        if sso_admin != settings.app.sso_admin:
+            changes.add('sso')
+        settings.app.sso_admin = sso_admin
 
     if 'sso_org' in flask.request.json:
         settings_commit = True
@@ -451,6 +375,22 @@ def settings_put():
             settings.local.host.routed_subnet6 = routed_subnet6
             settings.local.host.commit('routed_subnet6')
 
+    if 'server_cert' in flask.request.json:
+        settings_commit = True
+        server_cert = flask.request.json['server_cert']
+        if server_cert:
+            settings.app.server_cert = server_cert.strip()
+        else:
+            settings.app.server_cert = None
+
+    if 'server_key' in flask.request.json:
+        settings_commit = True
+        server_key = flask.request.json['server_key']
+        if server_key:
+            settings.app.server_key = server_key.strip()
+        else:
+            settings.app.server_key = None
+
     if 'cloud_provider' in flask.request.json:
         settings_commit = True
         cloud_provider = flask.request.json['cloud_provider']
@@ -495,6 +435,7 @@ def settings_put():
         settings.app.sso_token = None
         settings.app.sso_secret = None
         settings.app.sso_host = None
+        settings.app.sso_admin = None
         settings.app.sso_org = None
         settings.app.sso_saml_url = None
         settings.app.sso_saml_issuer_url = None
@@ -519,25 +460,6 @@ def settings_put():
             event.Event(type=USERS_UPDATED, resource_id=org.id)
 
     event.Event(type=SETTINGS_UPDATED)
-
-    if update_server:
-        app.update_server(0.5)
-
-    if update_acme:
-        try:
-            acme.update_acme_cert()
-            app.update_server(0.5)
-        except:
-            logger.exception('Failed to get LetsEncrypt cert', 'handler',
-                acme_domain=settings.app.acme_domain,
-            )
-            settings.app.acme_domain = None
-            settings.app.acme_key = None
-            settings.commit()
-            return utils.jsonify({
-                'error': ACME_ERROR,
-                'error_msg': ACME_ERROR_MSG,
-            }, 400)
 
     response = flask.g.administrator.dict()
     response.update(_dict())
