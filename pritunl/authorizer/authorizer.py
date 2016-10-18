@@ -55,7 +55,7 @@ class Authorizer(object):
             self._check_call(self._check_password)
             self._check_call(self._check_sso)
             self._check_call(self._auth_plugins)
-            if not self.reauth:
+            if not self.reauth and not settings.app.sso_okta_skip_push_auth:
                 self._check_call(self._check_push)
             self.callback(True)
         except:
