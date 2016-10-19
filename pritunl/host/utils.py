@@ -13,7 +13,6 @@ import collections
 import random
 import socket
 import math
-import os
 
 def get_by_id(id, fields=None):
     return Host(id=id, fields=fields)
@@ -94,7 +93,7 @@ def iter_hosts_dict(page=None):
         yield hst.dict()
 
 def init():
-    settings.local.host = Host(name=os.environ.get('PRITUNL_HOSTNAME', None))
+    settings.local.host = Host()
 
     try:
         settings.local.host.load()
