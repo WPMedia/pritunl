@@ -13,6 +13,7 @@ import collections
 import random
 import socket
 import math
+import os
 
 def get_by_id(id, fields=None):
     return Host(id=id, fields=fields)
